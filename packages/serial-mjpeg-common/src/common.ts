@@ -17,7 +17,8 @@ export interface ClientToServerEvents {
 }
 
 // Stores input chunks, average frame size = 13.5kb
-const chunkBuffer = new Uint8Array(1024 * 1000); // 1000KB
+const chunkBufferSize = 1024 * 1000;
+const chunkBuffer = new Uint8Array(chunkBufferSize); // 1MB
 // The amount of bytes in chunkBuffer
 let chunkBufferOffset = 0;
 // Keep track of reading index
@@ -33,8 +34,23 @@ export function processChunk(inputChunk: Uint8Array): null | Packet {
     return;
   }
   mutex = true;
+  // clear buffer on overflow
+  if (chunkBufferOffset + inputChunk.length >= chunkBufferSize) {
+    chunkBufferOffset = 0;
+  }
   // Append inputChunk to chunkBuffer
-  chunkBuffer.set(inputChunk, chunkBufferOffset);
+  try {
+    chunkBuffer.set(inputChunk, chunkBufferOffset);
+  } catch (error) {
+    let msg;
+    if (error instanceof Error)
+      msg = error.message;
+    else
+      msg = String(error);
+    console.error(`Error: ${msg}`);
+    console.error(`Offset: ${chunkBufferOffset}`);
+    console.error(`Chunk length: ${inputChunk.byteLength}`);
+  }
   // Main loop
   for (let i = readIndex; i < inputChunk.length + chunkBufferOffset; i++) {
     // find end of packet marker
