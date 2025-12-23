@@ -3,7 +3,7 @@ import fs from 'fs';
 import http from 'http';
 import mime from 'mime-types';
 import { SerialPort } from 'serialport';
-import { ClientToServerEvents, createKeyPacket, PacketType, processChunk, ServerToClientEvents } from 'serial-mjpeg-common';
+import { ClientToServerEvents, createKeyPacket, PacketType, processChunk, ServerToClientEvents } from 'common';
 import { Muxer, Demuxer, Decoder, Encoder, HardwareContext } from 'node-av/api';
 import { Codec, FilterAPI, FilterPreset, Frame, Log, Packet, PixelFormatUtils, FFEncoderCodec, AVHWDeviceType } from 'node-av';
 import jpegjs from 'jpeg-js';
@@ -47,7 +47,7 @@ let clients = new Map<String, Socket>();
 const server = http.createServer((req, res) => {
   if (req.url === '/')
     req.url = '/index.html';
-  fs.readFile('../serial-mjpeg-display/dist' + req.url, (err, data) => {
+  fs.readFile('../client/dist' + req.url, (err, data) => {
     console.log(req.url);
     if (err == null) {
       const mimeType = mime.lookup(req.url) ? <string>mime.lookup(req.url) : 'text/html';

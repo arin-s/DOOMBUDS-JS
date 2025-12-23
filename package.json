@@ -1,9 +1,10 @@
 {
   "name": "doombuds-js",
+  "version": "1.0.0",
   "workspaces": ["packages/*"],
     "scripts": {
-    "client:dev":   "npm run dev -w serial-mjpeg-display",
-    "client:build": "npm run build -w serial-mjpeg-display",
-    "server:dev":   "npm run client:build && npm run dev -w serial-mjpeg-node"
+    "client:dev":   "npm run dev -w client",
+    "client:build": "npm run build -w client",
+    "server:dev":   "npm run client:build && npm run dev -w server"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "serial-mjpeg-display",
+  "name": "client",
   "description": "View mjpeg streams on your serial port! Also has controls for interactivity.",
   "version": "1.0.0",
   "private": true,
@@ -22,7 +22,7 @@
     "vite": "^6.2.5"
   },
   "dependencies": {
-    "serial-mjpeg-common": "*",
+    "common": "file:../common",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "web-serial-polyfill": "^1.0.15"

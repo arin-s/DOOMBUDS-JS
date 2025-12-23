@@ -1,6 +1,6 @@
 import { serial as polyfill } from 'web-serial-polyfill';
 import { MsgType, SerialMessageEvent } from './serial-worker';
-import { processChunk, PacketType, Packet, ClientToServerEvents, ServerToClientEvents, createKeyPacket } from 'serial-mjpeg-common';
+import { processChunk, PacketType, Packet, ClientToServerEvents, ServerToClientEvents, createKeyPacket } from 'common';
 import { io, Socket } from 'socket.io-client';
 
 const serialWorker = new Worker(new URL('serial-worker.ts', import.meta.url), { type: 'module' });
