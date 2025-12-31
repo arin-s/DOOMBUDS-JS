@@ -1,6 +1,6 @@
 {
-  "name": "server",
-  "description": "Makes connected serial ports available to your network!",
+  "name": "serialserver",
+  "description": "Relays serial packets to the web server and transcodes the MJPEG stream to a user-provided URL",
   "version": "1.0.0",
   "private": true,
   "license": "Apache-2.0",
@@ -21,12 +21,13 @@
   },
   "dependencies": {
     "@types/prompts": "^2.4.9",
+    "common": "file:../common",
     "jpeg-js": "^0.4.4",
     "mime-types": "^3.0.1",
     "node-av": "^5.0.0",
     "prompts": "^2.4.2",
-    "common": "file:../common",
     "serialport": "^13.0.0",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.3"
   }
 }

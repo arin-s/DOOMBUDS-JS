@@ -5,6 +5,7 @@
     "scripts": {
     "client:dev":   "npm run dev -w client",
     "client:build": "npm run build -w client",
-    "server:dev":   "npm run client:build && npm run dev -w server"
+    "webserver:dev":   "npm run client:build && npm run dev -w webserver",
+    "serialserver:dev":   "npm run dev -w serialserver"
   }
 }

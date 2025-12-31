@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   relay = res.headers.has('DOOMBUDS-RELAY');
   if (relay) {
     connectButton.disabled = true;
-    socket = io();
+    socket = io('/user');
     socket.on('decodedPacket', (packet) => {
       processPacket(packet);
     });

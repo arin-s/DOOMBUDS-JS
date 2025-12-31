@@ -1,35 +1,16 @@
-import { Server, Socket } from 'socket.io';
-import fs from 'fs';
-import http from 'http';
-import mime from 'mime-types';
-import { SerialPort } from 'serialport';
-import { ClientToServerEvents, createKeyPacket, PacketType, processChunk, ServerToClientEvents } from 'common';
-import { Muxer, Demuxer, Decoder, Encoder, HardwareContext } from 'node-av/api';
-import { Codec, FilterAPI, FilterPreset, Frame, Log, Packet, PixelFormatUtils, FFEncoderCodec, AVHWDeviceType } from 'node-av';
 import jpegjs from 'jpeg-js';
 import prompts from 'prompts';
-import {
-  AV_HWDEVICE_TYPE_NONE,
-  AV_HWDEVICE_TYPE_VDPAU,
-  AV_HWDEVICE_TYPE_CUDA,
-  AV_HWDEVICE_TYPE_VAAPI,
-  AV_HWDEVICE_TYPE_DXVA2,
-  AV_HWDEVICE_TYPE_QSV,
-  AV_HWDEVICE_TYPE_VIDEOTOOLBOX,
-  AV_HWDEVICE_TYPE_D3D11VA,
-  AV_HWDEVICE_TYPE_DRM,
-  AV_HWDEVICE_TYPE_OPENCL,
-  AV_HWDEVICE_TYPE_MEDIACODEC,
-  AV_HWDEVICE_TYPE_VULKAN,
-  AV_HWDEVICE_TYPE_D3D12VA,
-  AV_HWDEVICE_TYPE_AMF,
-  AV_HWDEVICE_TYPE_OHCODEC,
-  AV_HWDEVICE_TYPE_RKMPP,
-  AV_LOG_WARNING,
-  AV_CODEC_ID_H264,
-  AV_PIX_FMT_NV12,
-  AV_PIX_FMT_RGBA,
-} from 'node-av/constants';
+import { SerialPort } from 'serialport';
+import { io, Socket } from 'socket.io-client';
+import { ClientToServerEvents, createKeyPacket, PacketType, processChunk, ServerToClientEvents } from 'common';
+import { Muxer, Demuxer, Decoder, Encoder, HardwareContext } from 'node-av/api';
+import { Codec, FilterAPI, FilterPreset, Frame, Log, Packet, PixelFormatUtils, FFEncoderCodec, AVHWDeviceType,
+          AV_LOG_WARNING, AV_PIX_FMT_RGBA, AV_CODEC_ID_H264, AV_PIX_FMT_NV12 } from 'node-av';
+import { createSign } from 'crypto';
+import * as nodeavconst from 'node-av/constants';
+
+
+// Load environment variables
 try {
   process.loadEnvFile('../../.env');
 }
@@ -39,63 +20,21 @@ catch (ignore) {
 if (!process.env.FFMPEG_URL) {
   throw new Error('FFMPEG_URL environment variable not supplied!');
 }
+let WEBSERVER_URL = process.env.WEBSERVER_URL;
+if (!WEBSERVER_URL) {
+  console.warn('No webserver URL supplied, defaulting to http://127.0.0.1');
+  WEBSERVER_URL = 'http://127.0.0.1';
+}
+let HTTP_PORT = '8080';
+if (process.env.HTTP_PORT)
+  HTTP_PORT = process.env.HTTP_PORT;
 
-const HTTP_PORT = 8080;
-let clients = new Map<String, Socket>();
-
-// setup http server
-const server = http.createServer((req, res) => {
-  if (req.url === '/')
-    req.url = '/index.html';
-  fs.readFile('../client/dist' + req.url, (err, data) => {
-    console.log(req.url);
-    if (err == null) {
-      const mimeType = mime.lookup(req.url) ? <string>mime.lookup(req.url) : 'text/html';
-      res.statusCode = 200;
-      res.setHeader('Content-Type', mimeType);
-      res.setHeader('DOOMBUDS-RELAY', 0);
-      res.write(data);
-    } else {
-      res.writeHead(404);
-    }
-    res.end();
-  });
-});
-
-// setup Socket.io server
-const io = new Server<
-  ClientToServerEvents,
-  ServerToClientEvents>(server, {
-  cors: {
-    // yeah just let em in
-    origin: true,
-  },
-});
-
-// set Socket.io events
-io.on('connection', (client) => {
-  console.log(`Client ${client.id} connected`);
-  clients.set(client.id, client);
-  // events
-  client.on('keyState', (keyStateArray) => {
-    serialPort.write(createKeyPacket(keyStateArray));
-  });
-  client.on('disconnect', (reason) => {
-    console.log(`Client ${client.id} disconnected`);
-    clients.delete(client.id);
-  });
-});
-
-// start http server
-server.listen(HTTP_PORT, 'localhost', () => {
-  console.log(`Server running at http://localhost:${HTTP_PORT}/`);
-});
-
+// Set av-node log level
 Log.setLevel(AV_LOG_WARNING);
 
-// Create mjpeg decoder
-let JPEGBuffer: Buffer = Buffer.alloc(1000 * 1000 * 10); // overkill 10 mb buffer
-console.log('Opening raw video input...');
+// Create decoder
+let JPEGBuffer: Buffer = Buffer.alloc(1000 * 1000 * 10); // kinda overkill
+console.log('Opening raw video input buffer...');
 let input = await Demuxer.open({
   type: 'video',
   input: JPEGBuffer,
@@ -108,52 +47,48 @@ const videoStream = input.video();
 console.log('Creating decoder...');
 const decoder = await Decoder.create(videoStream);
 
-const HW_DEVICE_MAP: Record<string, AVHWDeviceType> = {
-  cuda: AV_HWDEVICE_TYPE_CUDA,
-  vdpau: AV_HWDEVICE_TYPE_VDPAU,
-  vaapi: AV_HWDEVICE_TYPE_VAAPI,
-  dxva2: AV_HWDEVICE_TYPE_DXVA2,
-  qsv: AV_HWDEVICE_TYPE_QSV,
-  videotoolbox: AV_HWDEVICE_TYPE_VIDEOTOOLBOX,
-  d3d11va: AV_HWDEVICE_TYPE_D3D11VA,
-  drm: AV_HWDEVICE_TYPE_DRM,
-  opencl: AV_HWDEVICE_TYPE_OPENCL,
-  mediacodec: AV_HWDEVICE_TYPE_MEDIACODEC,
-  vulkan: AV_HWDEVICE_TYPE_VULKAN,
-  d3d12va: AV_HWDEVICE_TYPE_D3D12VA,
-  amf: AV_HWDEVICE_TYPE_AMF,
-  ohcodec: AV_HWDEVICE_TYPE_OHCODEC,
-  rkmpp: AV_HWDEVICE_TYPE_RKMPP,
-  none: AV_HWDEVICE_TYPE_NONE,
-};
-
-// init ffmpeg hw context
-const available = HardwareContext.listAvailable();
-const choices = available.map(ctx => ({ title: ctx, value: ctx }));
-
-const response = await prompts({
+// Init ffmpeg hw context
+const availableHWContexts = HardwareContext.listAvailable();
+const hwContextChoices = availableHWContexts.map(ctx => ({ title: ctx, value: ctx }));
+const hwContextResponse = await prompts({
   type: 'select',
   name: 'hardwarecontext',
   message: 'Select hardware context',
-  choices: choices,
+  choices: hwContextChoices,
 });
-
-const selectedStr = response.hardwarecontext;
-const selectedType = HW_DEVICE_MAP[selectedStr];
-
-const hw = HardwareContext.create(selectedType);
+const hwContextResponseStr = hwContextResponse.hardwarecontext;
+const HW_DEVICE_MAP: Record<string, AVHWDeviceType> = {
+  cuda: nodeavconst.AV_HWDEVICE_TYPE_CUDA,
+  vdpau: nodeavconst.AV_HWDEVICE_TYPE_VDPAU,
+  vaapi: nodeavconst.AV_HWDEVICE_TYPE_VAAPI,
+  dxva2: nodeavconst.AV_HWDEVICE_TYPE_DXVA2,
+  qsv: nodeavconst.AV_HWDEVICE_TYPE_QSV,
+  videotoolbox: nodeavconst.AV_HWDEVICE_TYPE_VIDEOTOOLBOX,
+  d3d11va: nodeavconst.AV_HWDEVICE_TYPE_D3D11VA,
+  drm: nodeavconst.AV_HWDEVICE_TYPE_DRM,
+  opencl: nodeavconst.AV_HWDEVICE_TYPE_OPENCL,
+  mediacodec: nodeavconst.AV_HWDEVICE_TYPE_MEDIACODEC,
+  vulkan: nodeavconst.AV_HWDEVICE_TYPE_VULKAN,
+  d3d12va: nodeavconst.AV_HWDEVICE_TYPE_D3D12VA,
+  amf: nodeavconst.AV_HWDEVICE_TYPE_AMF,
+  ohcodec: nodeavconst.AV_HWDEVICE_TYPE_OHCODEC,
+  rkmpp: nodeavconst.AV_HWDEVICE_TYPE_RKMPP,
+  none: nodeavconst.AV_HWDEVICE_TYPE_NONE,
+};
+const selectedDeviceType = HW_DEVICE_MAP[hwContextResponseStr];
+const hw = HardwareContext.create(selectedDeviceType);
 if (!hw) {
   throw new Error('No hardware acceleration available! This example requires hardware acceleration for encoding.');
 }
-console.log(`SELECTED HW: ${hw.deviceTypeName}`)
+console.log(`User-selected Device Type: ${hw.deviceTypeName}`);
 
-// Identify hardware h264 codec
+// Get hardware codec
 let hwCodecs: Codec[] = [];
 let hwCodecNames = hw.findSupportedCodecs(true) as FFEncoderCodec[];
 for (let hwCodecName of hwCodecNames) {
   let hwCodec = Codec.findEncoderByName(hwCodecName);
-  let encoderWorks = hw.testEncoder(AV_CODEC_ID_H264, hwCodec);
-  if (encoderWorks) {
+  let encoderTestResult = hw.testEncoder(AV_CODEC_ID_H264, hwCodec);
+  if (encoderTestResult) {
     hwCodecs.push(hwCodec);
   }
 }
@@ -193,9 +128,6 @@ const videoOutputIndex = output.addStream(encoder);
 // SIGINT handler
 process.on('SIGINT', () => {
   console.log('Ctrl-C was pressed!');
-  server.unref();
-  server.close();
-  console.log('HTTP Server closed');
   input.closeSync();
   console.log('Demuxer closed');
   output.closeSync();
@@ -232,8 +164,8 @@ serialPort.on('data', async (chunk: Buffer) => {
     ffmpegMutex = true;
     try {
       //console.log(`Video Packet Size ${packet.packetData.byteLength}`);
-      for (const client of clients.values()) {
-        client.emit('decodedPacket', packet);
+      if (webServer) {
+        webServer.emit('decodedPacket', packet);
         //console.log(`Emitting to client ${client.conn.remoteAddress}`);
       }
       let jpeg: jpegjs.BufferRet;
@@ -282,4 +214,11 @@ serialPort.on('data', async (chunk: Buffer) => {
       await output.writePacket(packet, outputAudioStreamIndex);
     } */
   }
+});
+
+const webServer: Socket<ClientToServerEvents, ServerToClientEvents> = io(`${WEBSERVER_URL}:${HTTP_PORT}/admin`);
+webServer.on('keyState', (keyStateArray) => {
+  const packet = createKeyPacket(keyStateArray);
+  if (serialPort.isOpen)
+    serialPort.write(packet);
 });
