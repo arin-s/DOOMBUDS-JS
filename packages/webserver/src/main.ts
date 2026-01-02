@@ -1,8 +1,6 @@
 import { Namespace, Server, Socket } from 'socket.io';
 import fs from 'fs';
-import http from 'http';
-import mime from 'mime-types';
-import { ClientToServerEvents, createKeyPacket, PacketType, processChunk, ServerToClientEvents } from 'common';
+import { ClientToServerEvents, ServerToClientEvents } from 'common';
 import { createVerify } from 'crypto';
 import express from 'express';
 import { createServer } from "http";
@@ -43,7 +41,7 @@ const adminNsp: Namespace<ServerToClientEvents, ClientToServerEvents> = io.of('/
 let serialServer: Socket<ServerToClientEvents, ClientToServerEvents> = null;
 
 // set Socket.io events
-let users = new Map<String, Socket<ClientToServerEvents, ServerToClientEvents>>();
+const users = new Map<String, Socket<ClientToServerEvents, ServerToClientEvents>>();
 userNsp.on('connection', (user) => {
   console.log(`Client ${user.id} connected`);
   users.set(user.id, user);
@@ -54,32 +52,46 @@ userNsp.on('connection', (user) => {
     }
   });
   user.on('disconnect', (reason) => {
-    console.log(`Client ${user.id} disconnected`);
+    console.log(`Client ${user.id} disconnected. Reason: ${reason}`);
     users.delete(user.id);
   });
 });
 
-adminNsp.use((socket, next) => {
-  if(process.env.PUB_KEY) {
-    const privKey = fs.readFileSync(path.join(import.meta.dirname, process.env.PUB_KEY));
-    const verify = createVerify('SHA-256');
-    verify.update(socket.handshake.auth.timestamp);
-    const timestamp = parseInt(socket.handshake.auth.timestamp);
-    const unixDelta = Math.abs(timestamp - Date.now());
-    if (unixDelta > 60 * 5)
-      next(new Error('Timestamp delta too high!'));
-    const valid = verify.verify(privKey, socket.handshake.auth.signedTimestamp, 'hex');
-    if (!valid)
-      next(new Error('Signature verification failed!'));
+adminNsp.use((admin, next) => {
+  if (process.env.PUB_KEY) {
+    try {
+      const privKey = fs.readFileSync(path.join(import.meta.dirname, process.env.PUB_KEY));
+      const verify = createVerify('SHA-256');
+      verify.update(admin.handshake.auth.timestamp);
+      const timestamp = parseInt(admin.handshake.auth.timestamp);
+      const time = Date.now();
+      const unixDelta = Math.abs(timestamp - time);
+      if (unixDelta > 60 * 5 * 1000) {
+        console.log(`Admin ${admin.client.conn.remoteAddress} failed to connect. Reason: Timestamp delta too high!`);
+        console.log(`Delta: ${unixDelta} Admin timestamp: ${timestamp} Local timestamp: ${time}`);
+        next(new Error(`Timestamp delta too high!`));
+      }
+      const valid = verify.verify(privKey, admin.handshake.auth.signedTimestamp, 'hex');
+      if (!valid) {
+        console.log(`Admin ${admin.client.conn.remoteAddress} failed to connect. Reason: Invalid signature!`);  
+        next(new Error('Invalid signature!'));
+      }
+    }
+    catch (err) {
+      if (err instanceof Error)
+        console.log(`Admin ${admin.client.conn.remoteAddress} failed to connect. ${err.name}: ${err.message}`);
+      next(new Error('Unknown signature verification error!'));
+    }
   }
-  serialServer = socket;
-  console.log('Admin connected!');
+  serialServer = admin;
+  console.log(`Admin ${admin.client.conn.remoteAddress} connected`);
   next();
 });
 
 adminNsp.on('connection', (admin) => {
-  admin.on('disconnect', () => {
+  admin.on('disconnect', (reason) => {
     serialServer = null;
+    console.log(`Admin ${admin.client.conn.remoteAddress} disconnected. Reason: ${reason}`);
   });
   admin.on('decodedPacket', (packet) => {
     // send to all clients for now
