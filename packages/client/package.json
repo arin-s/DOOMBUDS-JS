@@ -1,6 +1,6 @@
 {
-  "name": "standalone",
-  "description": "View mjpeg streams on your serial port! Also has controls for interactivity.",
+  "name": "client",
+  "description": "View mjpeg streams on the internet! Rip and tear!",
   "version": "1.0.0",
   "private": true,
   "license": "Apache-2.0",

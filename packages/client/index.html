@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Serial MJPEG Display</title>
+  <link href="./src/style.css" rel="stylesheet">
+  <script type="module" src="./src/index.ts"></script>
+</head>
+<body>
+  <div class="options">
+    <button id="connect">Connect</button>
+    <div>
+      <label for="polyfill_checkbox">Use polyfill:</label>
+      <input id="polyfill_checkbox" type="checkbox">
+    </div>
+    <label id="bpsLabel"></label>
+    <label id="fpsLabel"></label>
+    <label id="frameSizeLabel"></label>
+    <label id="keyLabel"></label>
+  </div>
+  <div id="terminal">
+  <img id="frameBuffer" width="320" height="200" tabindex="-1"></img>
+  </div>
+</body>
+
+</html>

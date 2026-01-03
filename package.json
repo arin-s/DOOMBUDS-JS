@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "workspaces": ["packages/*"],
     "scripts": {
+    "standalone:dev":   "npm run dev -w standalone",
+    "standalone:build": "npm run build -w standalone",
     "client:dev":   "npm run dev -w client",
     "client:build": "npm run build -w client",
     "webserver:dev":   "npm run client:build && npm run dev -w webserver",
