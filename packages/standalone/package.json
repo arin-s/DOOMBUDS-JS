@@ -1,5 +1,5 @@
 {
-  "name": "client",
+  "name": "standalone",
   "description": "View mjpeg streams on your serial port! Also has controls for interactivity.",
   "version": "1.0.0",
   "private": true,
