@@ -1,7 +1,6 @@
 import { serial as polyfill } from 'web-serial-polyfill';
 import { MsgType, SerialMessageEvent } from './serial-worker';
-import { processChunk, PacketType, Packet, ClientToServerEvents, ServerToClientEvents, createKeyPacket } from 'common';
-import { io, Socket } from 'socket.io-client';
+import { processChunk, PacketType, Packet, createKeyPacket } from 'common';
 
 const serialWorker = new Worker(new URL('serial-worker.ts', import.meta.url), { type: 'module' });
 
@@ -14,8 +13,6 @@ let fpsCounter = 0;
 let frameSizeLabel: HTMLLabelElement;
 let keyLabel;
 let keys: Map<number, boolean> = new Map();
-let relay: boolean;
-let socket: Socket<ServerToClientEvents, ClientToServerEvents>;
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Get elements
@@ -37,17 +34,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     fpsLabel.innerText = 'FPS: ' + fpsCounter.toString();
     fpsCounter = 0;
   }, 1000);
-
-  // If connecting to a nodejs server 
-  const res = await fetch(document.URL, {method: 'HEAD'});
-  relay = res.headers.has('DOOMBUDS-RELAY');
-  if (relay) {
-    connectButton.disabled = true;
-    socket = io('/user');
-    socket.on('decodedPacket', (packet) => {
-      processPacket(packet);
-    });
-  }
 });
 
 async function toggleConnect() {
@@ -146,10 +132,6 @@ function processInput(event: KeyboardEvent) {
     code += 32;
   keys.set(code, pressed);
   const keyStateArray = Array.from(keys, ([key, value]) => ({ key, value }));
-  if (relay)
-    socket.emit('keyState', keyStateArray);
-  else {
-    const keyStatePacket = createKeyPacket(keyStateArray);
-    serialWorker.postMessage({msg: MsgType.SERIAL_TX, array: keyStatePacket});
-  }
+  const keyStatePacket = createKeyPacket(keyStateArray);
+  serialWorker.postMessage({msg: MsgType.SERIAL_TX, array: keyStatePacket});
 }

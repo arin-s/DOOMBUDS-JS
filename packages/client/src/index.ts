@@ -1,33 +1,22 @@
-import { serial as polyfill } from 'web-serial-polyfill';
-import { MsgType, SerialMessageEvent } from './serial-worker';
-import { processChunk, PacketType, Packet, ClientToServerEvents, ServerToClientEvents, createKeyPacket } from 'common';
+import { PacketType, Packet, ClientToServerEvents, ServerToClientEvents } from 'common';
 import { io, Socket } from 'socket.io-client';
 
-const serialWorker = new Worker(new URL('serial-worker.ts', import.meta.url), { type: 'module' });
-
 let frameBuffer: HTMLImageElement;
-let connectButton: HTMLButtonElement;
-let polyfillCheckbox: HTMLInputElement;
-let connected = false;
 let bpsCounter = 0;
 let fpsCounter = 0;
 let frameSizeLabel: HTMLLabelElement;
 let keyLabel;
 let keys: Map<number, boolean> = new Map();
-let relay: boolean;
 let socket: Socket<ServerToClientEvents, ClientToServerEvents>;
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Get elements
   frameBuffer = document.getElementById('frameBuffer') as HTMLImageElement;
-  connectButton = document.getElementById('connect') as HTMLButtonElement;
-  polyfillCheckbox = document.getElementById('polyfill_checkbox') as HTMLInputElement;
   keyLabel = document.getElementById('keyLabel') as HTMLLabelElement;
   let bpsLabel = document.getElementById('bpsLabel') as HTMLLabelElement;
   let fpsLabel = document.getElementById('fpsLabel') as HTMLLabelElement;
   frameSizeLabel = document.getElementById('frameSizeLabel') as HTMLLabelElement;
   // Setup listeners
-  connectButton.addEventListener('click', toggleConnect);
   frameBuffer.addEventListener('keydown', processInput);
   frameBuffer.addEventListener('keyup', processInput);
   // Setup fps/bps tracker
@@ -37,73 +26,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     fpsLabel.innerText = 'FPS: ' + fpsCounter.toString();
     fpsCounter = 0;
   }, 1000);
-
-  // If connecting to a nodejs server 
-  const res = await fetch(document.URL, {method: 'HEAD'});
-  relay = res.headers.has('DOOMBUDS-RELAY');
-  if (relay) {
-    connectButton.disabled = true;
-    socket = io('/user');
-    socket.on('decodedPacket', (packet) => {
-      processPacket(packet);
-    });
-  }
-});
-
-async function toggleConnect() {
-  if (connected) {
-    connectButton.textContent = 'Disconnecting...';
-    connectButton.disabled = false;
-    serialWorker.postMessage(MsgType.DISCONNECT);
-  }
-  else {
-    const serial = polyfillCheckbox.checked ? polyfill : navigator.serial;
-    const ports = await serial.getPorts();
-    for (const port of ports)
-      await port.forget();
-    try {
-      await serial.requestPort({});
-    }
-    catch (e) {
-      console.error(e);
-      return;
-    }
-    connectButton.textContent = 'Connecting...';
-    connectButton.disabled = true;
-    serialWorker.postMessage({ msg: MsgType.CONNECT,
-      startParams: { baudRate: 3000000,
-        usePolyfill: polyfillCheckbox.checked } });
-  }
-}
-
-function markDisconnected(): void {
-  connected = true;
-  connectButton.textContent = 'Connect';
-  connectButton.disabled = false;
-}
-
-serialWorker.addEventListener('message', async (event: MessageEvent<SerialMessageEvent>) => {
-  //console.log(`RECEIVED EVENT: ${event.data.msg}`);
-  let packet: null | Packet;
-  switch (event.data.msg) {
-    case MsgType.CONNECT_FAILED:
-      console.log('Stream fail received');
-      markDisconnected();
-      break;
-    case MsgType.DISCONNECTED:
-      markDisconnected();
-      break;
-    case MsgType.CONNECTED:
-      connected = true;
-      console.log('CONNECTED');
-      connectButton.textContent = 'Disconnect';
-      connectButton.disabled = false;
-      break;
-    case MsgType.SERIAL_RX:
-      packet = processChunk(event.data.array!);
-      processPacket(packet);
-      break;
-  }
+  socket = io('/user');
+  socket.on('decodedPacket', (packet) => {
+    processPacket(packet);
+  });
 });
 
 function processPacket(packet: Packet | null) {
@@ -118,7 +44,6 @@ function processPacket(packet: Packet | null) {
       paintCanvas(packet.packetData);
       break;
   }
-
 }
 
 async function paintCanvas(frame: ArrayBuffer) {
@@ -146,10 +71,5 @@ function processInput(event: KeyboardEvent) {
     code += 32;
   keys.set(code, pressed);
   const keyStateArray = Array.from(keys, ([key, value]) => ({ key, value }));
-  if (relay)
-    socket.emit('keyState', keyStateArray);
-  else {
-    const keyStatePacket = createKeyPacket(keyStateArray);
-    serialWorker.postMessage({msg: MsgType.SERIAL_TX, array: keyStatePacket});
-  }
+  socket.emit('keyState', keyStateArray);
 }
