@@ -231,8 +231,11 @@ async function init() {
     webSocket.on('connect_error', (err) => {
       if (err instanceof Error) {
         console.error(`${err.name}: ${err.message}`);
+        if (err.message && err.message.includes('Timestamp delta too high!')) {
+          restart();
+        }
       }
-    })
+    });
   }
   catch (err) {
     console.log('init() failed');
@@ -380,7 +383,7 @@ async function restart()
       break;
     }
     catch (err) {
-      console.log('Re-try failed, re-trying in 5 seconds');
+      console.log('Failed, re-trying in 5 seconds');
       await new Promise(r => setTimeout(r, 5000));
     }
   }
@@ -388,4 +391,4 @@ async function restart()
 }
 
 // Entry point
-await init();
+await restart();

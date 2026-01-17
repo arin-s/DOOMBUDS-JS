@@ -101,6 +101,7 @@ function processPacket(packet: Packet | null) {
       console.log(new TextDecoder().decode(packet.packetData));
       break;
     case PacketType.PACKET_VIDEO:
+      //console.log('VIDEO PACKET');
       paintCanvas(packet.packetData);
       break;
   }

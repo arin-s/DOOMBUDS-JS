@@ -4,7 +4,7 @@ import { ClientToServerEvents, ServerToClientEvents } from 'common';
 import { createVerify } from 'crypto';
 import express from 'express';
 import { createServer } from "http";
-import path from 'path';
+import path, { join } from 'path';
 
 // Load environment variables
 try {
@@ -17,6 +17,19 @@ catch (ignore) {
 let HTTP_PORT = 8080;
 if (process.env.HTTP_PORT)
   HTTP_PORT = parseInt(process.env.HTTP_PORT);
+let DEFAULT_TURN_DURATION_MS = 10000;
+if (process.env.TURN_DURATION)
+  DEFAULT_TURN_DURATION_MS = parseInt(process.env.TURN_DURATION) * 1000;
+
+const allowedKeys: number[] = [];
+// Arrow keys
+allowedKeys.push(37, 38, 39, 40);
+// Escape, Enter, Spacebar, Right shift, Tab
+allowedKeys.push(27, 13, 32, 16, 9);
+// W A S D E
+allowedKeys.push(119, 97, 115, 100, 101);
+// Number keys
+allowedKeys.push(48, 49, 50, 51, 52, 53, 54, 55, 56, 57);
 
 // setup http server
 const app = express();
@@ -39,24 +52,62 @@ const userNsp: Namespace<ClientToServerEvents, ServerToClientEvents> = io.of('/u
 // swap the event types since we're just relaying them back to the serial server.
 const adminNsp: Namespace<ServerToClientEvents, ClientToServerEvents> = io.of('/admin');
 let serialServer: Socket<ServerToClientEvents, ClientToServerEvents> = null;
+let keys = new Set<number>();
 
 // set Socket.io events
-const users = new Map<String, Socket<ClientToServerEvents, ServerToClientEvents>>();
 userNsp.on('connection', (user) => {
   console.log(`Client ${user.id} connected`);
-  users.set(user.id, user);
   // events
   user.on('keyState', (keyStateArray) => {
-    if (serialServer) {
+    // Remove unallowed keys
+    keyStateArray = keyStateArray.filter(({ key }) => allowedKeys.includes(key));
+    // keep track of pressed keys so we can clear them later
+    for (const { key } of keyStateArray) {
+      keys.add(key);
+    }
+    // if we have a player and serial server is connected, forward the keys
+    if (currClient && currClient.id === user.id && serialServer) {
       serialServer.emit('keyState', keyStateArray);
     }
   });
   user.on('disconnect', (reason) => {
     console.log(`Client ${user.id} disconnected. Reason: ${reason}`);
-    users.delete(user.id);
+    // if current player, end turn
+    if (currClient && user.id === currClient.id) {
+      endTurn();
+    }
+    // remove from queue if present
+    else {
+      queue = queue.filter(socket => socket.id !== user.id);
+      emitQueueStatus();
+    }
+  });
+  user.on('joinQueue', (callback) => {
+    if (queue.includes(user)) {
+      callback('Already in queue!');
+      return;
+    }
+    if (queue.length >= 8000) {
+      callback('Queue full!');
+      return;
+    }
+    queue.push(user);
+    if (!currTimer && !currClient) {
+      startTurn();
+      return;
+    }
+    else {
+      callback(null);
+    }
+    user.once('leaveQueue', () => {
+      queue = queue.filter(socket => socket.id !== user.id);
+      emitQueueStatus();
+    });
+    emitQueueStatus();
   });
 });
 
+// serialserver middleware
 adminNsp.use((admin, next) => {
   if (process.env.PUB_KEY) {
     try {
@@ -73,7 +124,7 @@ adminNsp.use((admin, next) => {
       }
       const valid = verify.verify(privKey, admin.handshake.auth.signedTimestamp, 'hex');
       if (!valid) {
-        console.log(`Admin ${admin.client.conn.remoteAddress} failed to connect. Reason: Invalid signature!`);  
+        console.log(`Admin ${admin.client.conn.remoteAddress} failed to connect. Reason: Invalid signature!`);
         next(new Error('Invalid signature!'));
       }
     }
@@ -88,6 +139,7 @@ adminNsp.use((admin, next) => {
   next();
 });
 
+// handle serialserver connection event
 adminNsp.on('connection', (admin) => {
   admin.on('disconnect', (reason) => {
     serialServer = null;
@@ -95,8 +147,11 @@ adminNsp.on('connection', (admin) => {
   });
   admin.on('decodedPacket', (packet) => {
     // send to all clients for now
-    for (const user of users.values()) {
-      user.emit('decodedPacket', packet);
+    if (currClient)
+      currClient.emit('decodedPacket', packet);
+    let queuedSerialClients = queue.slice(0, 5);
+    for (let client of queuedSerialClients) {
+      client.emit('decodedPacket', packet);
     }
   });
 });
@@ -105,3 +160,56 @@ adminNsp.on('connection', (admin) => {
 httpServer.listen(HTTP_PORT, () => {
   console.log(`Server running at http://localhost:${HTTP_PORT}/`);
 });
+
+// queue stuff
+let currClient: Socket<ClientToServerEvents, ServerToClientEvents> | null = null;
+let currTimer: NodeJS.Timeout | null = null;
+let queue: Socket<ClientToServerEvents, ServerToClientEvents>[] = [];
+
+// pop queue and start a turn
+function startTurn() {
+  // this should not happen, but just in case
+  if (currTimer)
+    return;
+  // get the player at the front of the queue
+  currClient = queue.shift();
+  if (currClient === undefined) {
+    // no more clients
+    return;
+  }
+  emitQueueStatus();
+  currClient.emit('turnStart', Math.round(DEFAULT_TURN_DURATION_MS / 1000));
+  currTimer = setTimeout(() => {
+    endTurn();
+  }, DEFAULT_TURN_DURATION_MS);
+}
+
+function endTurn() {
+  if (currTimer) {
+    clearTimeout(currTimer);
+    currTimer = null;
+  }
+  if (currClient) {
+    currClient.emit('turnEnd');
+    currClient = null;
+  }
+  if (serialServer) {
+    const keyStateArray: { key: number; value: boolean }[] = [];
+    for (const key of keys) {
+      keyStateArray.push({ key: key, value: false });
+    }
+    console.log('Emitting clear');
+    serialServer.emit('keyState', keyStateArray);
+  }
+  startTurn();
+}
+
+function emitQueueStatus() {
+  let pos = 1;
+  for (const socket of queue) {
+    console.log(`Emitting for ${socket.conn.remoteAddress}`);
+    socket.emit('posStatus', pos);
+    pos++;
+  }
+  userNsp.emit('queueStatus', queue.length);
+}

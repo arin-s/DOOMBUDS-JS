@@ -10,9 +10,15 @@ export type Packet = { packetType: PacketType; packetData: ArrayBuffer };
 
 export interface ServerToClientEvents {
   decodedPacket: (packet: Packet) => void;
+  queueStatus: (playersInQueue: number) => void;
+  posStatus: (pos: number) => void;
+  turnStart: (duration: number) => void;
+  turnEnd: () => void;
 }
 
 export interface ClientToServerEvents {
+  joinQueue: (callback: (error: string | null) => void) => void;
+  leaveQueue: () => void;
   keyState: (keyStateArray: { key: number; value: boolean }[]) => void;
 }
 

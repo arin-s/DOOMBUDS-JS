@@ -1,44 +1,26 @@
-* {
-  box-sizing: border-box;
+@import 'tailwindcss';
+
+@utility doom-border-inset {
+  border: 6px solid;
+  border-top-color: #2c2c2c;
+  border-left-color: #2c2c2c;
+  border-right-color: #808080;
+  border-bottom-color: #808080;
 }
 
-html {
-  height: 100%;
+@utility doom-border-outset {
+  border: 6px solid;
+  border-top-color: #808080;
+  border-left-color: #808080;
+  border-right-color: #2c2c2c;
+  border-bottom-color: #2c2c2c;
 }
 
-body {
-  padding: 0;
-  margin: 0;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
+@utility doom-bg {
+  background-image: url(https://bghq.com/textures/doom/thmb/tn091.jpg);
 }
 
-.options {
-  display: flex;
-  flex: 0 1;
-  padding: 0.75em;
-  border-bottom: 1px black solid;
-  gap: 15px;
-}
-
-#terminal {
-  display: flex;
-  flex: 1 0;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-  container-type: size;
-}
-
-#frameBuffer {
-  border: 4px purple solid;
-  height: auto;
-  aspect-ratio: 320 / 200;
-  width: min(100%, 100cqh * 320 / 200);
-  /*image-rendering: pixelated;*/
-}
-
-.info {
-  justify-self: right;
+@font-face {
+  font-family: 'Minecraft';
+  src: url('assets/Minecraft.otf');
 }
