@@ -53,10 +53,22 @@ const userNsp: Namespace<ClientToServerEvents, ServerToClientEvents> = io.of('/u
 const adminNsp: Namespace<ServerToClientEvents, ClientToServerEvents> = io.of('/admin');
 let serialServer: Socket<ServerToClientEvents, ClientToServerEvents> = null;
 let keys = new Set<number>();
+let users = new Map<string, Socket>();
 
 // set Socket.io events
 userNsp.on('connection', (user) => {
   console.log(`Client ${user.id} connected`);
+  // this isn't bulletproof at all but gets rid of low hanging fruit at least
+  const uuid = user.handshake.auth.userId;
+  if (!uuid) {
+    user.disconnect();
+    return;
+  }
+  if (users.has(uuid)) {
+    console.log(`Old client instance ${users.get(uuid).id} booted!`);
+    users.get(uuid).disconnect();
+  }
+  users.set(uuid, user);
   // events
   user.on('keyState', (keyStateArray) => {
     // Remove unallowed keys

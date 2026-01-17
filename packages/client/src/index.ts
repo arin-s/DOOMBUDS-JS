@@ -72,7 +72,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       yourPosText.innerText = '-';
     }
   });
-  socket = io('/user');
+  const uuid = localStorage.getItem('userID');
+  if (!uuid) {
+    localStorage.setItem('userID', crypto.randomUUID());
+  }
+  socket = io('/user', {
+    auth: { userId: uuid },
+  });
   socket.on('decodedPacket', (packet) => {
     processPacket(packet);
   });
