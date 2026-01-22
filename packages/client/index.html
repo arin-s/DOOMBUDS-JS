@@ -8,7 +8,7 @@
   <script type="module" src="./src/index.ts"></script>
 </head>
 <body class="flex flex-col h-screen items-center doom-bg bg-gray-600 text-neutral-300 box-border font-[Minecraft]">
-  <a href="https://your-url" class="github-corner" aria-label="View source on GitHub">
+  <a href="https://github.com/arin-s/DOOMBuds" class="github-corner" aria-label="View source on GitHub">
     <svg class="w-20 h-20 md:w-30 md:h-30" viewBox="0 0 250 250"
       style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true">
       <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/>
@@ -91,9 +91,9 @@
           <li>The DOOM port that runs on the earbuds</li>
           <li>The 'serial server' that acts as a bridge between the earbuds and the web server and also transcodes the MJPEG stream to twitch</li>
           <li>The web server that serves assets, manages the queue, forwards keypresses and displays the MJPEG stream</li>
-          <li>The static webpage which tells your browser what to display on the screen and how to communicate with the web server</li>
+          <li>The static webpage that tells your browser what to display on the screen and how to communicate with the web server</li>
         </ol>
-        <p>The firmware pushes up against a few hardware limitations.</p>
+        <p>The firmware pushes up against a few hardware limitations:</p>
         <ol class="list-decimal pl-6">
           <li>
             Serial Connection
@@ -104,6 +104,7 @@
               The UART connection provides us with 2.4mbps of usable bandwidth. 2,400,000 / 8 / 96,000 gives us... 3 frames per second.<br>
               Clearly we need to compress the video stream. Modern video codecs like h264 consume way too much CPU and RAM.<br>
               The only feasible approach is sending the video as an MJPEG stream. MJPEG is a stream of JPEG images shown one after the other.<br>
+              I found an excellent JPEG encoder for embedded devices <a href="https://github.com/bitbank2/JPEGENC">here</a>, thanks Larry!<br>
               A conservative estimate for the average HIGH quality JPEG frame is around 13.5KB, but most scenes (without enemies) are around 11kb.<br>
               Theoretical maximum FPS:<br>
               - Optimistic:     `2,400,000 / (11,000 * 8)` = 27.3 FPS<br>
