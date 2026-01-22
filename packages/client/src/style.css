@@ -24,3 +24,9 @@
   font-family: 'Minecraft';
   src: url('assets/Minecraft.otf');
 }
+
+@layer base {
+  a {
+    @apply underline text-blue-300 hover:text-blue-500 visited:text-purple-400
+  }
+}

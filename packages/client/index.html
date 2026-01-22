@@ -8,6 +8,15 @@
   <script type="module" src="./src/index.ts"></script>
 </head>
 <body class="flex flex-col h-screen items-center doom-bg bg-gray-600 text-neutral-300 box-border font-[Minecraft]">
+  <a href="https://your-url" class="github-corner" aria-label="View source on GitHub">
+    <svg class="w-20 h-20 md:w-30 md:h-30" viewBox="0 0 250 250"
+      style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true">
+      <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/>
+      <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/>
+      <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/>
+    </svg>
+  </a>
+  <style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
   <div class="flex flex-col max-w-6xl w-full h-fit gap-6 p-6">
     <div class="flex flex-col doom-border-outset p-6 gap-4 bg-neutral-600 bg-bottom-left bg-repeat-x bg-size-[60px] lg:bg-size-[120px] bg-[url(assets/fire.gif)] [image-rendering:pixelated]">
       <img class="[image-rendering:pixelated]" src="src/assets/header.png">
@@ -45,6 +54,93 @@
           <p id="waitTimeText" class="text-green-400">-</p>
         </div>
       </div>
+    </div>
+    <div class="doom-border-outset bg-neutral-600 p-4">
+      <div class="text-xl font-bold">So... what exactly is this?</div>
+      <p>You know the 1993 classic DOOM? I made it run on an earbud, then I connected it to the internet and made it possible for visitors like you to <span class="line-through">sit in a queue for hours</span> play the game remotely!.</p>
+    </div>
+    <div class="doom-border-outset bg-neutral-600 p-4">
+      <div class="text-xl font-bold">DOOM? On an earbud? touch grass</div>
+      <p>Yeah but it won't just run on any old earbud, this only works with the <a href="https://pine64.com/product/pinebuds-pro-open-firmware-capable-anc-wireless-earbuds/">Pinebuds Pro</a>, the only earbuds with open source firmware.</p>
+    </div>
+    <div class="doom-border-outset bg-neutral-600 p-4">
+      <div class="text-xl font-bold">Can I look at the code or run this on my own Pinebuds?</div>
+      <p>You sure can! There are two relevant repos:</p>
+      <ul class="list-disc list-inside">
+        <li><a href="https://github.com/arin-s/DOOMBuds">DOOMBuds</a> for the DOOM port that will run on your earbud</li>
+        <li><a href="https://github.com/arin-s/DOOMBUDS-JS">DOOMBUDS-JS</a> to interact with the earbud through your browser</li>
+      </ul>
+    </div>
+    <div class="doom-border-outset bg-neutral-600 p-4">
+      <div class="text-xl font-bold">Wait, why am I looking at a twitch stream?</div>
+      <p>This was a necessary optimisation to avoid paying outgoing bandwidth fees, once you're 5th in the queue, the twitch player will switch to a low-latency MJPEG stream.</p>
+    </div>
+    <div class="doom-border-outset bg-neutral-600 p-4">
+      <div class="text-xl font-bold">wow this front end code is atrocious, state management is everywhe-</div>
+      <p>shhhh don't look don't look it's ok just join the queue</p>
+    </div>
+    <div class="doom-border-outset bg-neutral-600 p-4">
+      <div class="text-xl font-bold">Give us more info, how did you get this to work?</div>
+      <p>Let's switch to a more readable font first.</p>
+      <div class="font-sans text-lg">
+        <p>
+          I'll put out an article / video diving deeper into this later, but here are a few bits of info:<br>
+          This project is made up of four parts:
+        </p>
+        <ol class="list-decimal pl-6">
+          <li>The DOOM port that runs on the earbuds</li>
+          <li>The 'serial server' that acts as a bridge between the earbuds and the web server and also transcodes the MJPEG stream to twitch</li>
+          <li>The web server that serves assets, manages the queue, forwards keypresses and displays the MJPEG stream</li>
+          <li>The static webpage which tells your browser what to display on the screen and how to communicate with the web server</li>
+        </ol>
+        <p>The firmware pushes up against a few hardware limitations.</p>
+        <ol class="list-decimal pl-6">
+          <li>
+            Serial Connection
+            <p class="ml-3">
+              Earbuds don't have displays, so the only way to transfer data to/from them is either via bluetooth, or the UART contact pads.<br>
+              Bluetooth is pretty slow, you'd be lucky to get a consistent 1mbps connection, UART is easily the better option.<br>
+              DOOM's framebuffer is (width * height) bytes, 320 * 200 = 96kB. (doom's internal framebuffer is 8-bit not 24-bit)<br>
+              The UART connection provides us with 2.4mbps of usable bandwidth. 2,400,000 / 8 / 96,000 gives us... 3 frames per second.<br>
+              Clearly we need to compress the video stream. Modern video codecs like h264 consume way too much CPU and RAM.<br>
+              The only feasible approach is sending the video as an MJPEG stream. MJPEG is a stream of JPEG images shown one after the other.<br>
+              A conservative estimate for the average HIGH quality JPEG frame is around 13.5KB, but most scenes (without enemies) are around 11kb.<br>
+              Theoretical maximum FPS:<br>
+              - Optimistic:     `2,400,000 / (11,000 * 8)` = 27.3 FPS<br>
+              - Conservative: `2,400,000 / (13,500 * 8)` = 22.2 FPS
+            </p>
+          </li>
+          <li>
+            CPU
+            <p class="ml-3">
+              The stock open source firmware has the CPU set to 100mhz, so I cranked that up to 300mhz and disabled low power mode.<br>
+              The Cortex-M4F running at 300mhz is actually more than enough for DOOM, however it struggles with JPEG encoding.<br>
+              This is why it maxes out at ~18fps, I don't think there's much else I can do to speed it up.
+            </p>
+          </li>
+          <li>
+            RAM
+            <p class="ml-3">
+              By default, we only have access to 768KB of RAM, after disabling the co-processor it gets bumped up to the advertised 992KB.<br>
+              DOOM requires 4MB of RAM, though there are plenty of optimisations that can reduce this amount.<br>
+              Pre-generating lookup tables, making variables const, reading const variables from flash, disabling DOOM's caching system, removing unneeded variables. It all adds up!
+            </p>
+          </li>
+          <li>
+            FLASH
+            <p class="ml-3">
+              The shareware DOOM 1 wad (assets file) is 4.2MB and the earbuds can only store 4MB of data.<br>
+              Thankfully, <a href="https://github.com/fragglet">fragglet</a>, a well-known doom modder, has already solved this issue for me.<br>
+              <a href="https://github.com/fragglet/squashware">Squashware</a> is his trimmed-down DOOM 1 wad that is only 1.7MB in size.<br>
+              With this wad file, everything comfortably fits in flash.
+            </p>
+          </li>
+        </ol>
+      </div>
+    </div>
+        <div class="doom-border-outset bg-neutral-600 p-4">
+      <span class="text-xl font-bold">Shameless linkedin plug?</span>
+      <p>I thought you'd never ask! <a href="https://www.linkedin.com/in/arin-sarkisian/">(please hire me)</a></p>
     </div>
   </div>
 </body>
