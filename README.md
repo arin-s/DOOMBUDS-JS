@@ -20,3 +20,5 @@ If you pick the wrong one, reload the page and try again, the disconnect button 
 Make sure you are using a chromium-based browser, Firefox and Safari do not support the Web Serial API and thus will fail to open the serial connection.
 
 The 'use polyfill' checkbox is experimental and enables functionality on _some_ Android devices, however there are no touch controls so you'll need to use a bluetooth keyboard.
+
+https://github.com/user-attachments/assets/e00f58e9-0118-4975-a332-1baa0c0fae2b
