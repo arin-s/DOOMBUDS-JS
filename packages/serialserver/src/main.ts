@@ -318,7 +318,7 @@ async function serialData(chunk: Buffer) {
       let jpeg: jpegjs.BufferRet;
       //FFMPEG STUFF
       try {
-        jpeg = jpegjs.decode(packet.packetData);
+        jpeg = jpegjs.decode(packet.packetData, { tolerantDecoding: true });
       } catch (e) {
         if (e instanceof Error)
           console.error(`${e.name}: ${e.message}`);
@@ -337,22 +337,24 @@ async function serialData(chunk: Buffer) {
       // console.log(`${filter.isFilterInitialized} ${filter.isFilterOpen}`);
       await swFilter.process(frame);
       using swFrame = await swFilter.receive();
-      await filter.process(swFrame);
-      while (true) {
-        using hwFrame = await filter.receive();
-        if (!hwFrame) {
-          break;
-        }
-        // console.log(`Encoding frame pts: ${filteredFrame.pts}`);
-        await encoder.encode(hwFrame);
+      if (swFrame) {
+        await filter.process(swFrame);
         while (true) {
-          using encodedPacket = await encoder.receive();
-          if (!encodedPacket) {
+          using hwFrame = await filter.receive();
+          if (!hwFrame) {
             break;
           }
-          // console.log(`Got packet pts: ${encodedPacket.pts}`);
-          if (encodedPacket instanceof Packet)
-            await output.writePacket(encodedPacket, videoOutputIndex);
+          // console.log(`Encoding frame pts: ${filteredFrame.pts}`);
+          await encoder.encode(hwFrame);
+          while (true) {
+            using encodedPacket = await encoder.receive();
+            if (!encodedPacket) {
+              break;
+            }
+            // console.log(`Got packet pts: ${encodedPacket.pts}`);
+            if (encodedPacket instanceof Packet)
+              await output.writePacket(encodedPacket, videoOutputIndex);
+          }
         }
       }
     }

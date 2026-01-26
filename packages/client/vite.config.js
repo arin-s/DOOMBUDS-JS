@@ -3,7 +3,7 @@ import { defineConfig, loadEnv } from 'vite';
 import path from 'path';
 export default defineConfig(({mode, command}) => {
   const loadedEnvs = loadEnv(mode, path.resolve(import.meta.dirname, '..', '..'), '');
-  const envs = ['WEBSERVER_DOMAIN_NAME', 'TWITCH_CHANNEL'];
+  const envs = ['WEBSERVER_DOMAIN_NAME', 'TWITCH_CHANNEL', 'TURN_DURATION'];
   for (const env of envs) {
     if (!loadedEnvs[env])
       throw new Error(`Environment variable '${env}' is required!`);
