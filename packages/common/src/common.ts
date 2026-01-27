@@ -43,6 +43,7 @@ export function processChunk(inputChunk: Uint8Array): null | Packet {
   // clear buffer on overflow
   if (chunkBufferOffset + inputChunk.length >= chunkBufferSize) {
     chunkBufferOffset = 0;
+    readIndex = 0;
   }
   // Append inputChunk to chunkBuffer
   try {
