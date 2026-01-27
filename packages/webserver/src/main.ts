@@ -26,8 +26,8 @@ const allowedKeys: number[] = [];
 allowedKeys.push(37, 38, 39, 40);
 // Escape, Enter, Spacebar, Right shift, Tab
 allowedKeys.push(27, 13, 32, 16, 9);
-// W A S D E
-allowedKeys.push(119, 97, 115, 100, 101);
+// W A S D E Y N
+allowedKeys.push(119, 97, 115, 100, 101, 121, 110);
 // Number keys
 allowedKeys.push(48, 49, 50, 51, 52, 53, 54, 55, 56, 57);
 
