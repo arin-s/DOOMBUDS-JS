@@ -133,17 +133,20 @@ adminNsp.use((admin, next) => {
         console.log(`Admin ${admin.client.conn.remoteAddress} failed to connect. Reason: Timestamp delta too high!`);
         console.log(`Delta: ${unixDelta} Admin timestamp: ${timestamp} Local timestamp: ${time}`);
         next(new Error(`Timestamp delta too high!`));
+        return;
       }
       const valid = verify.verify(privKey, admin.handshake.auth.signedTimestamp, 'hex');
       if (!valid) {
         console.log(`Admin ${admin.client.conn.remoteAddress} failed to connect. Reason: Invalid signature!`);
         next(new Error('Invalid signature!'));
+        return;
       }
     }
     catch (err) {
       if (err instanceof Error)
         console.log(`Admin ${admin.client.conn.remoteAddress} failed to connect. ${err.name}: ${err.message}`);
       next(new Error('Unknown signature verification error!'));
+      return;
     }
   }
   serialServer = admin;
@@ -159,12 +162,7 @@ adminNsp.on('connection', (admin) => {
   });
   admin.on('decodedPacket', (packet) => {
     // send to all clients for now
-    if (currClient)
-      currClient.emit('decodedPacket', packet);
-    let queuedSerialClients = queue.slice(0, 5);
-    for (let client of queuedSerialClients) {
-      client.emit('decodedPacket', packet);
-    }
+    userNsp.emit('decodedPacket', packet);
   });
 });
 

@@ -28,14 +28,15 @@
         <div class="absolute flex grow opacity-75 size-full bg-black z-10"></div>
         <img class="absolute size-full z-20" src="src/assets/focusjak.webp">
       </div>
+      <canvas id="canvas" width="320" height="200" tabindex="0" class="[image-rendering:pixelated] w-[min(100%,100cqh*320/200)]">
     </div>
-    <div id="helpBox" class="flex flex-col doom-border-outset bg-neutral-600 p-4 gap-4">
+    <div id="helpBox" hidden class="flex flex-col doom-border-outset bg-neutral-600 p-4 gap-4">
       <p id="helpBoxHeader" class="text-center text-xl md:text-3xl xl:text-5xl">It's almost your turn, get ready!</p>
       <ul class="list-disc list-inside text-neutral-400 lg:text-xl xl:text-2xl">
         <li>Use WASD to move around and the arrow keys to look left and right.</li>
         <li>Space to shoot, Shift to sprint. E to interact with doors/objects.</li>
-        <li>Number keys for selecting weapons. Escape/Enter for menu use.</li>
-        <li>Press Tab to show the map. If you die, press E to respawn, noob.</li>
+        <li>Number keys for selecting weapons. Tab to show the map.</li>
+        <li>Escape/Enter for accessing the difficulty menu.</li>
       </ul>
     </div>
     <div class="flex flex-col doom-border-outset bg-neutral-600 p-4 gap-4">
@@ -73,16 +74,24 @@
       </ul>
     </div>
     <div class="doom-border-outset bg-neutral-600 p-4">
-      <div class="text-xl font-bold">Wait, why am I looking at a twitch stream?</div>
-      <p>This was a necessary optimisation to avoid paying outgoing bandwidth fees, once you're 5th in the queue, the twitch player will switch to a low-latency MJPEG stream.</p>
-    </div>
-    <div class="doom-border-outset bg-neutral-600 p-4">
       <div class="text-xl font-bold">wow this front end code is atrocious, state management is everywhe-</div>
       <p>shhhh don't look don't look it's ok just join the queue</p>
     </div>
     <div class="doom-border-outset bg-neutral-600 p-4">
-      <div class="text-xl font-bold">Give us more info, how did you get this to work?</div>
+      <div class="text-xl font-bold">Last time I came here there was a twitch stream. what happened?</div>
       <p>Let's switch to a more readable font first.</p>
+      <p class="font-sans text-lg">
+        The twitch stream was a classic case of premature optimisation.<br>
+        It was intended to dramatically reduce outgoing bandwidth, however it turned out to be completely unnecessary as I later migrated the server to a VPS host with much higher egress limits.<br>
+        It would also silently stop streaming to twitch for a variety of reasons, users would open the site and see a dead stream, then leave.<br>
+        Finding a fix was just not worth it. I had no reliable way of reproducing the bug, and with every second that passed, the stream could go down again.<br>
+        And it went down often, sometimes for hours at a time, and it was all because I wanted to avoid paying a few bucks.<br>
+        Is that greed, or hubris? Maybe both.<br>
+        Lesson learnt: Not every problem warrants a complex software solution.
+      </p>
+    </div>
+    <div class="doom-border-outset bg-neutral-600 p-4">
+      <div class="text-xl font-bold">Give us more info, how did you get this to work?</div>
       <div class="font-sans text-lg">
         <p>
           I'll put out an article / video diving deeper into this later, but here are a few bits of info:<br>

@@ -1,20 +1,18 @@
-import { PacketType, Packet, ClientToServerEvents, ServerToClientEvents, processChunk } from 'common';
+import { PacketType, Packet, ClientToServerEvents, ServerToClientEvents } from 'common';
 import { io, Socket } from 'socket.io-client';
-
-type streamType = 'serial' | 'twitch';
 
 let mjpegElement: HTMLImageElement;
 let bpsCounter = 0;
 let fpsCounter = 0;
-let frameSizeLabel: HTMLLabelElement;
-let keyLabel;
 let keys: Map<number, boolean> = new Map();
 let socket: Socket<ServerToClientEvents, ClientToServerEvents>;
 let status: 'watching' | 'inQueue' | 'inGame' = 'watching';
-let activeStream: streamType;
 let focusOverlay: HTMLDivElement;
 let helpBox: HTMLDivElement;
 let helpBoxHeader: HTMLParagraphElement;
+let canvas: HTMLCanvasElement;
+let ctx: CanvasRenderingContext2D;
+let ticker: NodeJS.Timeout;
 
 // mobile detection
 let mobile;
@@ -23,7 +21,7 @@ if (!matchMedia('(pointer:fine)').matches && navigator.maxTouchPoints > 1)
 else
   mobile = false;
 
-const DEFAULT_TURN_DURATION = import.meta.env.TURN_DURATION ?? 30;
+const DEFAULT_TURN_DURATION = import.meta.env.TURN_DURATION;
   
 document.addEventListener('DOMContentLoaded', async () => {
   // Get elements
@@ -34,19 +32,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   focusOverlay = document.getElementById('focusOverlay') as HTMLDivElement;
   helpBox = document.getElementById('helpBox') as HTMLDivElement;
   helpBoxHeader = document.getElementById('helpBoxHeader') as HTMLParagraphElement;
-  switchStream('twitch');
-  //keyLabel = document.getElementById('keyLabel') as HTMLLabelElement;
-  //let bpsLabel = document.getElementById('bpsLabel') as HTMLLabelElement;
-  //let fpsLabel = document.getElementById('fpsLabel') as HTMLLabelElement;
-  //frameSizeLabel = document.getElementById('frameSizeLabel') as HTMLLabelElement;
-  // Setup listeners
-  // Setup fps/bps tracker
-  /*window.setInterval(() => {
-    bpsLabel.innerText = 'Bits/Sec: ' + bpsCounter.toString();
-    bpsCounter = 0;
-    fpsLabel.innerText = 'FPS: ' + fpsCounter.toString();
-    fpsCounter = 0;
-  }, 1000);*/
+  canvas = document.getElementById('canvas') as HTMLCanvasElement;
+  ctx = canvas.getContext('2d');
   if (mobile) {
     joinButton.disabled = mobile;
     joinButton.classList.replace('doom-border-outset', 'doom-border-inset');
@@ -67,7 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     else if (status === 'inQueue') {
       socket.emit('leaveQueue');
       status = 'watching';
-      switchStream('twitch');
+      disableHints();
       joinButton.innerText = 'Join queue';
       yourPosText.innerText = '-';
     }
@@ -107,10 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     waitTimeText.innerText = `${Math.floor(timeSecs / 60)}:${String(timeSecs % 60).padStart(2, '0')}`;
     yourPosText.innerText = `#${pos.toString()}`;
     if (pos <= 5)
-      switchStream('serial');
-    // if someone cuts in front of you >:)
-    else if (activeStream === 'serial' && pos > 5)
-      switchStream('twitch');
+      enableHints();
   });
   socket.on('turnEnd', () => {
     console.log('TURN END');
@@ -121,7 +105,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     helpBoxHeader.innerText = `It's almost your turn, get ready!`;
     helpBoxHeader.classList.remove('animate-bounce');
     helpBoxHeader.classList.remove('text-red-600');
-    switchStream('twitch');
+    document.getElementById('durationDiv')?.remove();
+    canvas.onkeydown = null;
+    canvas.onkeyup = null;
+    disableHints();
+    clearInterval(ticker);
     keys.clear();
   });
   socket.on('turnStart', (duration) => {
@@ -135,8 +123,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     helpBoxHeader.innerText = `It's your turn! RIP AND TEAR!`;
     helpBoxHeader.classList.add('animate-bounce');
     helpBoxHeader.classList.add('text-red-600');
-    if (activeStream === 'twitch')
-      switchStream('serial');
+    canvas.onkeydown = processInput;
+    canvas.onkeyup = processInput;
+    enableHints();
     // progress bar
     const durationDiv = document.createElement('div');
     durationDiv.className = 'relative h-8 md:h-14';
@@ -149,9 +138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     durationBar.max = duration;
     durationBar.value = duration;
     label.innerText = duration.toString();
-    let ticker = setInterval(() => {
-      if (duration === 1)
-        clearInterval(ticker);
+    ticker = setInterval(() => {
       duration--;
       durationBar.value = duration;
       label.innerText = duration.toString();
@@ -181,10 +168,9 @@ async function paintCanvas(frame: ArrayBuffer) {
   fpsCounter++;
   //frameSizeLabel.innerText = "Frame Size: " + blob.size;
   try {
-    createImageBitmap(blob); // errors if invalid image
-    const url = URL.createObjectURL(blob);
-    mjpegElement.onload = () => { URL.revokeObjectURL(url) };
-    mjpegElement.src = url;
+    const bitmap = await createImageBitmap(blob); // errors if invalid image
+    if(ctx)
+      ctx.drawImage(bitmap, 0, 0);
   } catch (error) {
     console.error("MALFORMED IMAGE: ", error);
     console.error(`FRAME SIZE: ${frame.byteLength}`);
@@ -203,39 +189,20 @@ function processInput(event: KeyboardEvent) {
   socket.emit('keyState', keyStateArray);
 }
 
-function switchStream(streamType: streamType) {
-  activeStream = streamType;
-  const container = document.getElementById('stream-container');
-  document.getElementById('stream')?.remove();
-  document.getElementById('durationDiv')?.remove();
-  if (streamType === 'twitch') {
-    const child = document.createElement('iframe');
-    child.id = 'stream';
-    child.className = 'aspect-video';
-    child.src = `https://player.twitch.tv/?channel=${import.meta.env.TWITCH_CHANNEL}&parent=localhost&parent=${import.meta.env.WEBSERVER_DOMAIN_NAME}`;
-    container.append(child);
+function disableHints() {
+  canvas.onfocus = null;
+  canvas.onblur = null;
+  focusOverlay.hidden = true;
+  helpBox.hidden = true;
+}
+
+function enableHints() {
+  canvas.onfocus = () => {
     focusOverlay.hidden = true;
-    helpBox.hidden = true;
-  }
-  else {
-    const child = document.createElement('img');
-    child.id = 'stream';
-    child.className = '[image-rendering:pixelated] w-[min(100%,100cqh*320/200)]';
-    child.width = 320;
-    child.height = 200;
-    child.tabIndex = 0;
-    container.append(child);
-    child.addEventListener('keydown', processInput);
-    child.addEventListener('keyup', processInput);
-    child.addEventListener('focus', () => {
-      focusOverlay.hidden = true;
-    });
-    child.addEventListener('blur', () => {
-      focusOverlay.hidden = false;
-    });
-    helpBox.hidden = false;
+  };
+  canvas.onblur = () => {
     focusOverlay.hidden = false;
-    mjpegElement = child;
-    child.focus();
-  }
+  };
+  helpBox.hidden = false;
+  canvas.focus();
 }
