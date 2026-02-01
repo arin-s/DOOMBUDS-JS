@@ -1,0 +1,55 @@
+name: TypeScript Build
+
+on:
+  push:
+    branches: [main] # Trigger on pushes to the main branch
+  pull_request:
+    branches: [main] # Trigger on pull requests targeting the main branch
+  workflow_dispatch:
+
+jobs:
+  #Build job
+  build:
+    runs-on: ubuntu-latest # Choose an operating system to run the workflow on
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # Checks out your repository to the workflow runner
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4 # Sets up Node.js environment
+        with:
+          node-version: "22.x" # Or your preferred Node.js version (check your project's requirements)
+
+      - name: Install dependencies
+        run: npm install # Or yarn install, pnpm install depending on your package manager
+
+      - name: Compile TypeScript
+        run: npm run standalone:build # Executes your build script defined in package.json (usually 'tsc')
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: packages/standalone/dist
+
+  # Deploy job
+  deploy:
+    # Add a dependency to the build job
+    needs: build
+
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write # to deploy to Pages
+      id-token: write # to verify the deployment originates from an appropriate source
+
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    # Specify runner + deployment step
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4 # or specific "vX.X.X" version tag for this action
