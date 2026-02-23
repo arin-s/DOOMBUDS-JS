@@ -157,7 +157,9 @@ adminNsp.use((admin, next) => {
 // handle serialserver connection event
 adminNsp.on('connection', (admin) => {
   admin.on('disconnect', (reason) => {
-    serialServer = null;
+    if (serialServer === admin) {
+      serialServer = null;
+    }
     console.log(`Admin ${admin.client.conn.remoteAddress} disconnected. Reason: ${reason}`);
   });
   admin.on('decodedPacket', (packet) => {
