@@ -59,9 +59,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       yourPosText.innerText = '-';
     }
   });
-  const uuid = localStorage.getItem('userID');
+  let uuid = localStorage.getItem('userID');
   if (!uuid) {
-    localStorage.setItem('userID', crypto.randomUUID());
+    uuid = crypto.randomUUID();
+    localStorage.setItem('userID', uuid);
   }
   socket = io('/user', {
     auth: { userId: uuid },
