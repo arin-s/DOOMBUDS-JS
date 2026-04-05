@@ -55,6 +55,11 @@ let serialServer: Socket<ServerToClientEvents, ClientToServerEvents> = null;
 let keys = new Set<number>();
 let users = new Map<string, Socket>();
 
+const olog = console.log;
+console.log = (...args) => {
+  olog(`${new Date().toLocaleString("en-GB", { timeZone: "Australia/Sydney" })}:   `, ...args);
+}
+
 // set Socket.io events
 userNsp.on('connection', (user) => {
   console.log(`Client ${user.id} connected`);
